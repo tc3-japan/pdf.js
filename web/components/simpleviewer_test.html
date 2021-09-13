@@ -140,11 +140,11 @@ loadingTask.promise.then(function (pdfDocument) {
 
 function on_search_click(){
   console.log("call on_search_click");
-  SEARCH_FOR = document.getElementById("search_word").value;
-  console.log(SEARCH_FOR);
+  let search_word = document.getElementById("search_word").value;
+  console.log(search_word);
 
   loadingTask.promise.then(function (pdfDocument) {
-    pdfFindController.executeCommand("find", { query: SEARCH_FOR });
+    pdfFindController.executeCommand("find", { query: search_word });
   });
 
   loadingTask.promise.then(function (pdfDocument) {
