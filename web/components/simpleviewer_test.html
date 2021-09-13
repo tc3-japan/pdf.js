@@ -144,7 +144,17 @@ function on_search_click(){
   console.log(search_word);
 
   loadingTask.promise.then(function (pdfDocument) {
-    pdfFindController.executeCommand("find", { query: search_word });
+    // find
+    // findhighlightallchange
+    // findagain
+    pdfFindController.executeCommand("find", {
+      query: search_word,
+      phraseSearch: true,
+      caseSensitive: false,
+      entireWord: false,
+      highlightAll: true,
+      findPrevious: true,
+      });
   });
 
   loadingTask.promise.then(function (pdfDocument) {
