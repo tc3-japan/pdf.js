@@ -54,19 +54,19 @@ const pdfViewer = new pdfjsViewer.PDFViewer({
   findController: pdfFindController,
   scriptingManager: pdfScriptingManager,
   enableScripting: true, // Only necessary in PDF.js version 2.10.377 and below.
-  
+  scale: 0.5,
 });
 pdfLinkService.setViewer(pdfViewer);
 pdfScriptingManager.setViewer(pdfViewer);
 
 eventBus.on("pagesinit", function () {
   // We can use pdfViewer now, e.g. let's change default scale.
-  pdfViewer.currentScaleValue = "page-width";
-  //pdfViewer.currentScaleValue = 0.5;
+  //pdfViewer.currentScaleValue = "page-width";
+  pdfViewer.currentScaleValue = 1;
 
   // We can try searching for things.
   if (SEARCH_FOR) {
-    pdfFindController.executeCommand("find", { query: SEARCH_FOR });
+    //pdfFindController.executeCommand("find", { query: SEARCH_FOR });
   }
 });
 
@@ -99,7 +99,7 @@ function on_search_click(){
       caseSensitive: false,
       entireWord: false,
       highlightAll: true,
-      findPrevious: true,
+      findPrevious: false,
       });
   });
 

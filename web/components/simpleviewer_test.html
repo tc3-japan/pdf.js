@@ -17,10 +17,9 @@ limitations under the License.
 <html dir="ltr" mozdisallowselectionprint>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <!--meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"-->
   <meta name="google" content="notranslate">
   <title>PDF.js viewer using built components</title>
-
   <style>
     body {
       background-color: #808080;
@@ -30,34 +29,23 @@ limitations under the License.
     #viewerContainer {
       overflow: auto;
       position: absolute;
-      width: 100%;
+      width: 70%;
       height: 100%;
     }
   </style>
-
   <link rel="stylesheet" href="../../node_modules/pdfjs-dist/web/pdf_viewer.css">
-
   <script src="../../node_modules/pdfjs-dist/build/pdf.js"></script>
   <script src="../../node_modules/pdfjs-dist/web/pdf_viewer.js"></script>
 </head>
 
 <body>
-  <table>
-    <tr>
-      <td valign="top" style="background-color:white;">
-        <textarea id="search_word" cols="40" rows="8"></textarea>
-        <button id="search">Search</button>
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <div id="viewerContainer">
-          <div id="viewer" class="pdfViewer"></div>
-          <script src="./simpleviewer_test.js"></script>
-        </div>
-      </td>
-    </tr>
+  <div id="viewerContainer">
+    <div id="viewer" class="pdfViewer"></div>
   </div>
-  </table>
+  <div align="right">
+    <textarea id="search_word" cols="50" rows="4"></textarea>
+    <button id="search">Search</button>
+  </div>
+  <script src="./simpleviewer_test.js"></script>
 </body>
 </html>
