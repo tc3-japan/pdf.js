@@ -86,8 +86,26 @@ loadingTask.promise.then(function (pdfDocument) {
 
 function on_search_click(){
   console.log("call on_search_click");
-  let search_word = document.getElementById("search_word").value;
+  let word = document.getElementById("search_word").value;
   console.log(search_word);
+
+  //let click_word = getSelection().anchorNode.nodeValue;
+  //console.log(click_word);
+
+  var forEach = Array.prototype.forEach;
+
+  var span = document.querySelectorAll('div.textLayer > span');
+  forEach.call(span, function (elem) {
+    text = elem.textContent;
+    if (text.includes(word) && word != "") {
+      console.log(text);
+      elem.style.backgroundColor = '#f00';
+    } else {
+      elem.style.backgroundColor = '';
+    }
+  });
+
+  /*
 
   loadingTask.promise.then(function (pdfDocument) {
     // find
@@ -110,4 +128,5 @@ function on_search_click(){
       })
     }
   });
+  */
 }

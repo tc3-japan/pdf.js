@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Cache-control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/docs/4.0/assets/img/favicons/favicon.ico">
+
+    <title>Sentence extraction and highlight in PDF</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.css">
+
+    <style>
+    #the-canvas {
+      border: 1px solid black;
+      direction: ltr;
+    }
+    </style
+
+  </head>
+
+  <body>
+    <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
+      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">Doc Summary</a>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <main role="main" class="col-md-8 ml-sm-auto pt-3 px-4">
+            <div id="upload-div">
+                File Uploader
+                <input type="file" id="uploadfiles" />
+            </div>
+            <div id="pdfviewer-div"/>
+        </main>
+
+        <nav class="col-md-4 d-none d-md-block bg-light sidebar">
+          <div class="sidebar-sticky">
+            Sentences
+            <div id="toolbar">
+                <button id="search-selected-button" class="btn btn-secondary">Save selected highlightings</button>
+            </div>
+            <table id="table"
+                data-search="true"
+                data-search-highlight="true"
+                data-toolbar="#toolbar"
+                data-pagination="true"
+                data-page-size="5"
+                data-sortable="true"
+            >
+            <thead>
+                <tr>
+                    <th data-field="state" data-checkbox="true"></th>
+                    <th data-field="clickedWord" data-sortable="true">Clicked Word</th>
+                    <th data-field="page_num" data-sortable="true">PageNo.</th>
+                    <th data-field="sentence" data-sortable="true">Sentence</th>
+                </tr>
+          </thead>
+            </table>
+
+          </div>
+        </nav>
+
+      </div>
+    </div>
+
+    <!-- JavaScript
+    ================================================== -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-table@1.18.3/dist/bootstrap-table.min.js"></script>
+    <script src="//unpkg.com/string-similarity@4.0.3/umd/string-similarity.min.js"></script>
+
+    <!-- Icons -->
+    <!--script src="https://unpkg.com/feather-icons/dist/feather.min.js"></script>
+    <script>
+      feather.replace()
+    </script-->
+
+
+    <script>
+
+    // -------------- START of pdf viewer customizations
+    var pdfViewerCustomizations = {
+        title: escape('PDF Viewer - Sentence extraction by clicked word & Highlight sentence'),
+        backgroundColor: 'blue',
+        hideAboutButton: true,
+    }
+    // -------------- END of pdf viewer customizations
+
+
+
+    // the remote pdf file url
+    var pdf_url = '../uploads/tmp.pdf';
+    var hilitepdf_url = '../uploads/tmp_highlighted.pdf';
+
+
+    // Loaded via <script> tag, create shortcut to access PDF.js exports.
+    var pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+
+    // reference to currently viewed PDF document sentences
+    var sentences = null;
+
+
+    // reference to matched sentences
+    var matchedSentences = [];
+
+
+    $.extend({
+
+
+        /**
+         * file upload event handler, upload file to /upload POST method
+         */
+        uploadFile: function (e) {
+
+            console.log(this.files);
+
+            let file = this.files[0];
+
+            var uploadUrl = '/upload';
+            var xhr = new XMLHttpRequest();
+            var fd = new FormData();
+            xhr.open("POST", uploadUrl, true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    // Every thing ok, file uploaded
+                    console.log(xhr.responseText); // handle response.
+                    
+                    var uploadedPdfUrl = pdf_url + '?run=' + parseInt(Math.random()*500000);
+
+                    $('#pdfviewer-div').empty().hide().append('<iframe id="pdfviewer-iframe" src="/static/ViewerJS/index.html?title=' + pdfViewerCustomizations.title + '#' + uploadedPdfUrl + '" width=100% height=500 allowfullscreen webkitallowfullscreen onload="$.pdfloaded()"></iframe>');
+
+                    /**
+                     * extract sentences from PDF
+                     */
+                    $.ajax({
+                        url: '/extract_sentences',
+                        contentType: "application/json",
+                    }).done(function(results) {
+
+                        // no matched sentences when new pdf is loaded
+                        matchedSentences = [];
+
+                        // reference returned sentences from parsing the PDF
+                        sentences = results;
+
+                        console.log('results');
+                        console.log(results);
+                        $('#table').bootstrapTable();
+                        $('#table').bootstrapTable('load', []);
+                        $('#table').bootstrapTable('resetView');
+                    });
+
+                }
+            };
+            fd.append("the_file", file);
+            //xhr.send(fd);
+        },
+
+
+        /**
+         * Apply a few customer customizations (see above for properties)
+         */
+        applyCustomerCustomizations: function(idoc) {
+
+            // hide "About" button
+            if (pdfViewerCustomizations.hideAboutButton) {
+                $(idoc).find('#about').hide();
+            }
+
+            // set colors
+            ['#titlebar', '#toolbarContainer'].forEach(function(id) {
+                $(idoc).find(id).css('background-image', 'none');
+                $(idoc).find(id).css('background-color', pdfViewerCustomizations.backgroundColor);
+            })
+        },
+
+
+        /**
+         * PDF is loaded handling function
+         */
+        pdfloaded: function () {
+            console.log('pdfviewer-iframe loaded');
+
+            setTimeout(function() {
+
+                $('#pdfviewer-div').show();
+
+                // reference pdf viewer
+                var iframe = window.frames['pdfviewer-iframe']
+                var idoc = iframe.contentDocument || iframe.contentWindow.document; // ie compatibility
+
+                // hide about
+                $.applyCustomerCustomizations(idoc);
+
+
+                $("#pdfviewer-iframe").contents().find(".textLayer").mouseup(function() {
+                    console.log('*** mouseup');
+
+                    var text = idoc.getSelection().toString();
+
+                    console.log('   idoc.getSelection()', idoc.getSelection());
+                    console.log('   text', text);
+
+                    // referenced to the clicked word
+                    var clickedWord = idoc.getSelection().anchorNode.nodeValue;
+                    console.log('clickedWord', clickedWord);
+
+                    // highlight clicked word if present when no dragged over text
+                    if (text.trim() === '' && clickedWord !== '') {
+
+                        // set the clicked word as searched text
+                        $('.search-input').val(clickedWord);
+
+
+                        // highlight sentences by searching clicked word in pdf viewer
+                        $.highlightSentenceByClickedWordInPDFViewer(idoc, clickedWord);
+
+
+                        // select sentences by clicked word
+                        var matches = $.selectSentencesByClickedWord(clickedWord);
+                        matchedSentences = matchedSentences.concat(matches);
+
+
+                        // show selected sentences in sentences in grid
+                        var table = $('#table');
+                        $.showSentenceByClickedWordInTable(table, matchedSentences);
+                    }
+                })
+
+            }, 3000);
+        },
+
+
+        /**
+         * Select sentences by keyword
+         */
+        selectSentencesByClickedWord: function(clickedWord) {
+            // select sentences based on clicked word
+            var selectedSentences = [];
+            sentences.forEach(function(sentence) {
+                if (sentence.sentence.indexOf(clickedWord) > -1) {
+                    sentence.clickedWord = clickedWord;
+                    selectedSentences.push(sentence);
+                }
+            })
+            console.log('selectedSentences', selectedSentences);
+            return selectedSentences;
+        },
+
+
+        /**
+         * Show sentence by clicked word in table
+         */
+        showSentenceByClickedWordInTable: function(table, selectedSentences) {
+            $('#table').bootstrapTable();
+            $('#table').bootstrapTable('load', selectedSentences);
+            $('#table').bootstrapTable('resetView');
+        },
+
+
+        /**
+         * Highlight sentence by clicked word in pdf viewer
+         */
+        highlightSentenceByClickedWordInPDFViewer: function(idoc, clickedWord) {
+        
+            // search forward direction
+            var forwardSegments = [];
+            var sentenceWords = [];
+            var hasMatchedBefore = false;
+            $(idoc).find('div.textLayer>div').toArray().forEach(function(el, idx) {
+                var thisWord = $(el).html();
+                var hasMatchedClickedWord = thisWord === clickedWord;
+                if (hasMatchedBefore || hasMatchedClickedWord) {
+                    console.log('thisWord', thisWord, 'idx', idx);
+                    sentenceWords.push(thisWord);
+                    $(el).css('background-color', 'red').css('color', 'white');
+                    hasMatchedBefore = true;
+                }
+
+                var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
+                if (hasEndOfSentence && hasMatchedBefore) {
+                    hasMatchedBefore = false;
+                    forwardSegments.push(sentenceWords.join(' '));
+                    sentenceWords = [];
+                }
+            })
+
+            // now do a backward search
+            var backwardSegments = [];
+            var sentenceWords = [];
+            var hasMatchedBefore = false;
+            $(idoc).find('div.textLayer>div').toArray().reverse().forEach(function(el, idx) {
+                var thisWord = $(el).html();
+                var hasMatchedClickedWord = thisWord === clickedWord;
+                var hasEndOfSentence = thisWord !== clickedWord && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
+                if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
+                    sentenceWords.push(thisWord);
+                    $(el).css('background-color', 'red').css('color', 'white');
+                    hasMatchedBefore = true;
+                }
+                if (hasEndOfSentence && hasMatchedBefore) {
+                    backwardSegments.push(sentenceWords.reverse().join(' '));
+                    hasMatchedBefore = false;
+                    sentenceWords = [];
+                }
+            })
+        },
+    
+    })
+
+
+
+    $(document).ready(function() {
+
+        // define file upload event handler
+        $('input[type="file"]').change($.uploadFile);
+
+        // permanently highlight sentences
+        $('#search-selected-button').click(function () {
+            $.ajax({
+                url: '/highlight_sentences',
+                method: 'POST',
+                contentType: "application/json",
+                data: JSON.stringify($('#table').bootstrapTable('getSelections'))
+            }).done(function(results) {
+
+                var uploadedPdfUrl = hilitepdf_url + '?run=' + parseInt(Math.random()*500000);
+
+                $('#pdfviewer-div').empty().hide().append('<iframe id="pdfviewer-iframe" src="/static/ViewerJS/index.html?title=' + pdfViewerCustomizations.title + '#' + uploadedPdfUrl + '" width=100% height=500 allowfullscreen webkitallowfullscreen onload="$.pdfloaded()"></iframe>');
+            });
+        })
+    });
+
+
+
+    </script>
+  </body>
+</html>
+
