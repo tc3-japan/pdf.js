@@ -66,7 +66,11 @@
 }
 
 .textLayer ::selection {
-  background: rgba(0, 0, 255, 1);
+  margin: 10px;
+  /*padding: 1px;*/
+  background-color: rgba(0, 100, 0, 1);
+  /*background: rgba(0, 0, 255, 1);*/
+  /*background: rgba(0, 0, 0, 0);*/
 }
 
 /* Avoids https://github.com/mozilla/pdf.js/issues/13840 in Chrome */

@@ -18,47 +18,49 @@ eventBus.on("pagesinit", function () {
   pdfViewer.currentScaleValue = 1;
 });
 // Add event listener
-let btn = document.getElementById("search");
-btn.addEventListener("click", on_search_click, false);
+let select_sentence_button = document.getElementById("select_sentence");
+select_sentence_button.addEventListener("click", on_select_sentence_button_click, false);
+let clear_all_highlight_button = document.getElementById("clear_highlight");
+clear_all_highlight_button.addEventListener("click", on_clear_all_highlight_button_click, false);
 let viewer = document.getElementById("viewer");
 viewer.addEventListener("mouseup", on_mouse_up);
+var selected_sentnce_table = document.getElementById('selected_sentnce_table');
 
 function on_mouse_up(event) {
-  console.log("on_mouse_up in");
-  console.log(event);
-  console.log(event.srcElement.textContent);
-  event.srcElement.style.backgroundColor = '#f00';
+  //console.log("on_mouse_up in");
+  //console.log(event);
+  //console.log(event.srcElement.textContent);
+
+  if (event.srcElement.className != "textLayer" && event.srcElement.className != "endOfContent") {
+    change_background_color(event.srcElement.style);
+  }
+
   var sentence = event.srcElement.textContent;
-  if (sentence == "") return;
+  if (sentence == "" || sentence == " ") return;
 
   var previous_element = get_previous_element(event.srcElement.previousElementSibling);
-  if (previous_element != null) {
-    while (previous_element != null) {
-      let previous_word = previous_element.textContent;
-      if (previous_word.indexOf('.') > -1 || previous_word.indexOf('?') > -1 || previous_word.indexOf('!') > -1) {
-        previous_element = null;
-      } else {
-        sentence = previous_word + sentence;
-        previous_element.style.backgroundColor = '#f00';
-          // null is no more next element;
-        previous_element = get_previous_element(previous_element);
-      }
+  while (previous_element != null) {
+    let previous_word = previous_element.textContent;
+    if (previous_word.indexOf('.') > -1 || previous_word.indexOf('?') > -1 || previous_word.indexOf('!') > -1) {
+      previous_element = null;
+    } else {
+      sentence = previous_word + sentence;
+      change_background_color(previous_element.style);
+        // null is no more next element;
+      previous_element = get_previous_element(previous_element);
     }
   }
 
   var next_element = get_next_element(event.srcElement.nextElementSibling);
-  if (next_element != null) {
-    next_element.style.backgroundColor = '#f00';
-    while (next_element != null) {
-      let next_word = next_element.textContent;
-      sentence += next_word;
-      next_element.style.backgroundColor = '#f00';
-      if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
-        next_element = null;
-      } else {
-        // null is no more next element;
-        next_element = get_next_element(next_element);
-      }
+  while (next_element != null) {
+    let next_word = next_element.textContent;
+    sentence += next_word;
+    change_background_color(next_element.style);
+    if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
+      next_element = null;
+    } else {
+      // null is no more next element;
+      next_element = get_next_element(next_element);
     }
   }
 
@@ -79,10 +81,45 @@ function on_mouse_up(event) {
   }
 
   if (spacy_sentence != null) {
-    console.log("found spacy sentence: " + spacy_sentence);
+    //console.log("found spacy sentence: " + spacy_sentence);
   }
 
-  console.log("on_mouse_up end");
+  if (is_new_selection) {
+    append_table_row(sentence);
+  }
+  //console.log("on_mouse_up end");
+}
+
+function is_new_selection() {
+  if (style.backgroundColor == 'rgb(0, 100, 0)') {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+function append_table_row(selected_sentnce) {
+  var row = selected_sentnce_table.insertRow(-1);
+
+  var checkbox_cell = row.insertCell(0);
+  var checkbox = document.createElement('input');
+  checkbox.setAttribute('type','checkbox');
+  checkbox.setAttribute('checked', 'true');
+  checkbox_cell.appendChild(checkbox);
+
+  var sentence_cell = row.insertCell(-1);
+  sentence_cell.appendChild(document.createTextNode(selected_sentnce));
+}
+
+var is_new_selection = false;
+function change_background_color(style) {
+  if (style.backgroundColor == 'rgb(0, 100, 0)') {
+    style.backgroundColor = '';
+    is_new_selection = false;
+  } else {
+    style.backgroundColor = 'rgb(0, 100, 0)';
+    is_new_selection = true;
+  }
 }
 
 function get_next_element(nextElementSibling) {
@@ -97,76 +134,66 @@ function get_previous_element(previousElementSibling) {
   }
 }
 
-function on_search_click() {
-  console.log("call on_search_click");
-  let word = document.getElementById("search_word").value;
+function on_select_sentence_button_click() {
+  //console.log("call on_search_click");
+  let search_word = document.getElementById("search_word").value;
+  //console.log("search_word: " + search_word);
 
-  var span = document.querySelectorAll('div.textLayer > span');
-  var forEach = Array.prototype.forEach;
-  forEach.call(span, function (elem) {
-    let text = elem.textContent;
-    if (text.includes(word) && word != "") {
-      console.log(text);
-      elem.style.backgroundColor = '#f00';
-    } else {
-      elem.style.backgroundColor = '';
-    }
-  });
-
-  /*
-  var forEach = Array.prototype.forEach;
-  forEach.call(sentences, function (elem) {
-    text = elem.sentence;
-    if (text.includes(word) && word != "") {
-      console.log("SpaCy sentence: " + text);
-    }
-  });
-  */
-
-  /*
-  var forEach = Array.prototype.forEach;
-
-  var span = document.querySelectorAll('div.textLayer > span');
-  forEach.call(span, function (elem) {
-    console.log(elem);
-    var previous_element = get_previous_element(elem.srcElement.previousElementSibling);
-    if (previous_element != null) {
-      while (previous_element != null) {
-        let previous_word = previous_element.textContent;
-        if (previous_word.indexOf('.') > -1 || previous_word.indexOf('?') > -1 || previous_word.indexOf('!') > -1) {
-          previous_element = null;
-        } else {
-          sentence = previous_word + sentence;
-          previous_element.style.backgroundColor = '#f00';
-            // null is no more next element;
-          previous_element = get_previous_element(previous_element);
-        }
+  // search forward direction
+  var forwardSegments = [];
+  var sentenceWords = [];
+  var hasMatchedBefore = false;
+  $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
+      var thisWord = $(el).html();
+      var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
+      if (hasMatchedBefore || hasMatchedClickedWord) {
+          //console.log('thisWord', thisWord, 'idx', idx);
+          sentenceWords.push(thisWord);
+          $(el).css('background-color', 'green');
+          hasMatchedBefore = true;
       }
-    }
 
-    var next_element = get_next_element(elem.srcElement.nextElementSibling);
-    if (next_element != null) {
-      next_element.style.backgroundColor = '#f00';
-      while (next_element != null) {
-        let next_word = next_element.textContent;
-        sentence += next_word;
-        next_element.style.backgroundColor = '#f00';
-        if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
-          next_element = null;
-        } else {
-          // null is no more next element;
-          next_element = get_next_element(next_element);
-        }
+      var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
+      if (hasEndOfSentence && hasMatchedBefore) {
+          hasMatchedBefore = false;
+          forwardSegments.push(sentenceWords.join(' '));
+          sentenceWords = [];
       }
-    }
+  })
 
-    text = elem.textContent;
-    if (text.includes(word) && word != "") {
-      console.log(text);
-      elem.style.backgroundColor = '#f00';
-    } else {
-      elem.style.backgroundColor = '';
-    }*/
+  // now do a backward search
+  var backwardSegments = [];
+  var sentenceWords = [];
+  var hasMatchedBefore = false;
+  $(document).find('div.textLayer>span').toArray().reverse().forEach(function(el, idx) {
+      var thisWord = $(el).html();
+      var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
+      var hasEndOfSentence = thisWord != search_word && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
+      if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
+          sentenceWords.push(thisWord);
+          $(el).css('background-color', 'green');
+          hasMatchedBefore = true;
+      }
+      if (hasEndOfSentence && hasMatchedBefore) {
+          backwardSegments.push(sentenceWords.reverse().join(' '));
+          hasMatchedBefore = false;
+          sentenceWords = [];
+      }
+  })
+
+  let selected_sentences = forwardSegments.push(backwardSegments);
+
+  console.log(forwardSegments);
+  console.log(backwardSegments);
+  console.log("selected sentence:");
+  console.log(selected_sentences);
+
+}
+
+function on_clear_all_highlight_button_click(event) {
+  $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
+      $(el).css('background-color', '');
+  })
 }
 
 // the remote pdf file url
