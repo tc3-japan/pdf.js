@@ -31,36 +31,44 @@ function on_dblclick(event) {
   //console.log(event);
   //console.log(event.srcElement.textContent);
 
+  var dblclicked_word = event.srcElement.textContent;
+  var sentence = event.srcElement.textContent;
+  if (sentence == "" || sentence.indexOf(" ") > -1 || sentence.indexOf("　") > -1) return;
+
   if (event.srcElement.className != "textLayer" && event.srcElement.className != "endOfContent") {
+    // change to the background color of the dblclicked element
     change_background_color(event.srcElement.style);
   }
-
-  var sentence = event.srcElement.textContent;
-  if (sentence == "" || sentence == " ") return;
 
   var previous_element = get_previous_element(event.srcElement.previousElementSibling);
   while (previous_element != null) {
     let previous_word = previous_element.textContent;
     if (previous_word.indexOf('.') > -1 || previous_word.indexOf('?') > -1 || previous_word.indexOf('!') > -1) {
-      previous_element = null;
+        previous_element = null;
     } else {
+      if (previous_word != " " && previous_word != "　") {
+        change_background_color(previous_element.style);
+      }
       sentence = previous_word + sentence;
-      change_background_color(previous_element.style);
         // null is no more next element;
       previous_element = get_previous_element(previous_element);
     }
   }
 
-  var next_element = get_next_element(event.srcElement.nextElementSibling);
-  while (next_element != null) {
-    let next_word = next_element.textContent;
-    sentence += next_word;
-    change_background_color(next_element.style);
-    if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
-      next_element = null;
-    } else {
-      // null is no more next element;
-      next_element = get_next_element(next_element);
+  if (dblclicked_word.indexOf('.') == -1 && dblclicked_word.indexOf('?') == -1 && dblclicked_word.indexOf('!') == -1) {
+    var next_element = get_next_element(event.srcElement.nextElementSibling);
+    while (next_element != null) {
+      let next_word = next_element.textContent;
+      sentence += next_word;
+      if (next_word != " " && next_word != "　") {
+        change_background_color(next_element.style);
+      }
+      if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
+        next_element = null;
+      } else {
+        // null is no more next element;
+        next_element = get_next_element(next_element);
+      }
     }
   }
 
@@ -136,9 +144,8 @@ function get_previous_element(previousElementSibling) {
 
 function on_select_sentence_button_click() {
   //console.log("call on_search_click");
-  let search_word = document.getElementById("search_word").value;
   //console.log("search_word: " + search_word);
-
+  let search_word = document.getElementById("search_word").value;
   // search forward direction
   var forwardSegments = [];
   var sentenceWords = [];
@@ -152,7 +159,6 @@ function on_select_sentence_button_click() {
           $(el).css('background-color', 'green');
           hasMatchedBefore = true;
       }
-
       var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
       if (hasEndOfSentence && hasMatchedBefore) {
           hasMatchedBefore = false;
@@ -160,7 +166,6 @@ function on_select_sentence_button_click() {
           sentenceWords = [];
       }
   })
-
   // now do a backward search
   var backwardSegments = [];
   var sentenceWords = [];
@@ -168,16 +173,19 @@ function on_select_sentence_button_click() {
   $(document).find('div.textLayer>span').toArray().reverse().forEach(function(el, idx) {
       var thisWord = $(el).html();
       var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
-      var hasEndOfSentence = thisWord != search_word && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
+      var hasEndOfSentence = thisWord.indexOf(search_word) == -1 && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
       if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
           sentenceWords.push(thisWord);
           $(el).css('background-color', 'green');
           hasMatchedBefore = true;
       }
-      if (hasEndOfSentence && hasMatchedBefore) {
-          backwardSegments.push(sentenceWords.reverse().join(' '));
-          hasMatchedBefore = false;
-          sentenceWords = [];
+      if (idx > 1) {
+        if (hasEndOfSentence && hasMatchedBefore) {
+            backwardSegments.push(sentenceWords.reverse().join(' '));
+            hasMatchedBefore = false;
+            sentenceWords = [];
+            //console.log('thisWord', thisWord, 'idx', idx);
+          }
       }
   })
 
