@@ -158,7 +158,9 @@ function on_select_sentence_button_click() {
       if (hasMatchedBefore || hasMatchedClickedWord) {
           //console.log('thisWord', thisWord, 'idx', idx);
           sentenceWords.push(thisWord);
-          $(el).css('background-color', 'green');
+          if (thisWord != " " && thisWord != "　") {
+            $(el).css('background-color', 'green');
+          }
           hasMatchedBefore = true;
       }
       var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
@@ -178,7 +180,9 @@ function on_select_sentence_button_click() {
       var hasEndOfSentence = thisWord.indexOf(search_word) == -1 && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
       if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
           sentenceWords.push(thisWord);
-          $(el).css('background-color', 'green');
+          if (thisWord != " " && thisWord != "　") {
+            $(el).css('background-color', 'green');
+          }
           hasMatchedBefore = true;
       }
       if (idx > 1) {
