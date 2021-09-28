@@ -20,10 +20,16 @@ eventBus.on("pagesinit", function () {
 // Add event listener
 let select_sentence_button = document.getElementById("select_sentence");
 select_sentence_button.addEventListener("click", on_select_sentence_button_click, false);
+
 let clear_all_highlight_button = document.getElementById("clear_highlight");
 clear_all_highlight_button.addEventListener("click", on_clear_all_highlight_button_click, false);
+
+let clear_table_records = document.getElementById("clear_table_records");
+clear_table_records.addEventListener("click", on_clear_table_records_click, false);
+
 let viewer = document.getElementById("viewer");
 viewer.addEventListener("dblclick", on_dblclick);
+
 var selected_sentnce_table = document.getElementById('selected_sentnce_table');
 
 function on_dblclick(event) {
@@ -33,7 +39,8 @@ function on_dblclick(event) {
 
   var dblclicked_word = event.srcElement.textContent;
   var sentence = event.srcElement.textContent;
-  if (sentence == "") return;
+  // when white space dblclicked
+  if (sentence == "" || sentence == " " || sentence == "　") return;
 
   if (event.srcElement.className != "textLayer" && event.srcElement.className != "endOfContent") {
     // change to the background color of the dblclicked element
@@ -142,6 +149,10 @@ function get_previous_element(previousElementSibling) {
   if (previousElementSibling != null) {
     return previousElementSibling.previousElementSibling;
   }
+}
+
+function on_clear_table_records_click() {
+  selected_sentnce_table.innerHTML = '';
 }
 
 function on_select_sentence_button_click() {
