@@ -28,16 +28,18 @@ var selected_sentnce_table = document.getElementById('selected_sentnce_table');
 
 function on_dblclick(event) {
   //console.log("on_mouse_up in");
-  //console.log(event);
+  console.log(event);
   //console.log(event.srcElement.textContent);
 
   var dblclicked_word = event.srcElement.textContent;
   var sentence = event.srcElement.textContent;
-  if (sentence == "" || sentence.indexOf(" ") > -1 || sentence.indexOf("　") > -1) return;
+  if (sentence == "") return;
 
   if (event.srcElement.className != "textLayer" && event.srcElement.className != "endOfContent") {
     // change to the background color of the dblclicked element
     change_background_color(event.srcElement.style);
+  } else {
+    return;
   }
 
   var previous_element = get_previous_element(event.srcElement.previousElementSibling);
