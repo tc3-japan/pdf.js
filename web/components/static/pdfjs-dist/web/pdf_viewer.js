@@ -6237,7 +6237,7 @@ var _text_layer_builder = __w_pdfjs_require__(7);
 
 var _xfa_layer_builder = __w_pdfjs_require__(8);
 
-const DEFAULT_CACHE_SIZE = 10;
+const DEFAULT_CACHE_SIZE = 100;
 
 function PDFPageViewBuffer(size) {
   const data = [];

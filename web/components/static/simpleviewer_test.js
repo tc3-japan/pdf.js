@@ -17,6 +17,7 @@ const pdfViewer = new pdfjsViewer.PDFViewer({
 eventBus.on("pagesinit", function () {
   pdfViewer.currentScaleValue = 1;
 });
+
 // Add event listener
 let select_sentence_button = document.getElementById("select_sentence");
 select_sentence_button.addEventListener("click", on_select_sentence_button_click, false);
@@ -31,6 +32,14 @@ let viewer = document.getElementById("viewer");
 viewer.addEventListener("dblclick", on_dblclick);
 
 var selected_sentnce_table = document.getElementById('selected_sentnce_table');
+
+function show_balloon(target_element){
+  if (target_element.className == "balloon_hyde"){
+    target_element.className = "balloon";
+  }else{
+    target_element.className = "balloon_hyde";
+  }
+}
 
 function on_dblclick(event) {
   //console.log("on_mouse_up in");
@@ -48,6 +57,20 @@ function on_dblclick(event) {
   } else {
     return;
   }
+
+  // balloon test
+  //show_balloon(event.srcElement);
+
+  // index and top test
+  var index;
+  var top;
+  $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
+    if (event.srcElement.innerHTML == $(el).html()) {
+      console.log("match element. index=" + idx);
+      index = idx;
+      top = event.srcElement.style.top;
+    }
+  })
 
   var previous_element = get_previous_element(event.srcElement.previousElementSibling);
   while (previous_element != null) {
@@ -80,7 +103,10 @@ function on_dblclick(event) {
       }
     }
   }
-
+  if (is_new_selection) {
+    append_table_row(sentence, index, top);
+  }
+  /*
   console.log("sentence: " + sentence);
 
   spacy_sentence = null;
@@ -88,7 +114,6 @@ function on_dblclick(event) {
   if (sentences != null) {
     sentences.forEach(function(element){
       //console.log(element.sentence);
-      
       if (element.sentence.replace(" ", "").indexOf(sentence.replace("- ", "").replace(" ", "")) > -1) {
         spacy_sentence = element.sentence;
         console.log("sentence found.");
@@ -98,27 +123,15 @@ function on_dblclick(event) {
   }
 
   if (spacy_sentence != null) {
-    //console.log("found spacy sentence: " + spacy_sentence);
+    console.log("found spacy sentence: " + spacy_sentence);
   }
-
-  if (is_new_selection) {
-    append_table_row(sentence);
-  }
-  //console.log("on_mouse_up end");
+  */
 }
 
-function is_new_selection() {
-  if (style.backgroundColor == 'rgb(0, 100, 0)') {
-    return false;
-  } else {
-    return true;
-  }
-}
-
-function append_table_row(selected_sentnce) {
+function append_table_row(selected_sentnce, index, top) {
   var row = selected_sentnce_table.insertRow(-1);
 
-  var checkbox_cell = row.insertCell(0);
+  var checkbox_cell = row.insertCell(-1);
   var checkbox = document.createElement('input');
   checkbox.setAttribute('type','checkbox');
   checkbox.setAttribute('checked', 'true');
@@ -126,15 +139,22 @@ function append_table_row(selected_sentnce) {
 
   var sentence_cell = row.insertCell(-1);
   sentence_cell.appendChild(document.createTextNode(selected_sentnce));
+
+  var index_cell = row.insertCell(-1);
+  index_cell.appendChild(document.createTextNode(index));
+
+  var top_cell = row.insertCell(-1);
+  top_cell.appendChild(document.createTextNode(top));
 }
 
 var is_new_selection = false;
 function change_background_color(style) {
-  if (style.backgroundColor == 'rgb(0, 100, 0)') {
+  if (style.backgroundColor == 'rgb(0, 0, 100)') {
     style.backgroundColor = '';
     is_new_selection = false;
   } else {
-    style.backgroundColor = 'rgb(0, 100, 0)';
+    style.backgroundColor = 'rgb(0, 0, 100)';
+    //style.opacity = 1.5;
     is_new_selection = true;
   }
 }
@@ -159,51 +179,54 @@ function on_select_sentence_button_click() {
   //console.log("call on_search_click");
   //console.log("search_word: " + search_word);
   let search_word = document.getElementById("search_word").value;
+
   // search forward direction
   var forwardSegments = [];
   var sentenceWords = [];
   var hasMatchedBefore = false;
   $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
-      var thisWord = $(el).html();
-      var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
-      if (hasMatchedBefore || hasMatchedClickedWord) {
-          //console.log('thisWord', thisWord, 'idx', idx);
-          sentenceWords.push(thisWord);
-          if (thisWord != " " && thisWord != "　") {
-            $(el).css('background-color', 'green');
-          }
-          hasMatchedBefore = true;
-      }
-      var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
-      if (hasEndOfSentence && hasMatchedBefore) {
-          hasMatchedBefore = false;
-          forwardSegments.push(sentenceWords.join(' '));
-          sentenceWords = [];
-      }
+    var thisWord = $(el).html();
+    var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
+    if (hasMatchedBefore || hasMatchedClickedWord) {
+        //console.log('thisWord', thisWord, 'idx', idx);
+        sentenceWords.push(thisWord);
+        if (thisWord != " " && thisWord != "　") {
+          $(el).css('background-color', 'green');
+          //$(el).css('opacity', '0.2');
+        }
+        hasMatchedBefore = true;
+    }
+    var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
+    if (hasEndOfSentence && hasMatchedBefore) {
+        hasMatchedBefore = false;
+        forwardSegments.push(sentenceWords.join(' '));
+        sentenceWords = [];
+    }
   })
   // now do a backward search
   var backwardSegments = [];
   var sentenceWords = [];
   var hasMatchedBefore = false;
   $(document).find('div.textLayer>span').toArray().reverse().forEach(function(el, idx) {
-      var thisWord = $(el).html();
-      var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
-      var hasEndOfSentence = thisWord.indexOf(search_word) == -1 && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
-      if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
-          sentenceWords.push(thisWord);
-          if (thisWord != " " && thisWord != "　") {
-            $(el).css('background-color', 'green');
-          }
-          hasMatchedBefore = true;
-      }
-      if (idx > 1) {
-        if (hasEndOfSentence && hasMatchedBefore) {
-            backwardSegments.push(sentenceWords.reverse().join(' '));
-            hasMatchedBefore = false;
-            sentenceWords = [];
-            //console.log('thisWord', thisWord, 'idx', idx);
-          }
-      }
+    var thisWord = $(el).html();
+    var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
+    var hasEndOfSentence = thisWord.indexOf(search_word) == -1 && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
+    if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
+        sentenceWords.push(thisWord);
+        if (thisWord != " " && thisWord != "　") {
+          $(el).css('background-color', 'green');
+          //$(el).css('opacity', '0.2');
+        }
+        hasMatchedBefore = true;
+    }
+    if (idx > 1) {
+      if (hasEndOfSentence && hasMatchedBefore) {
+          backwardSegments.push(sentenceWords.reverse().join(' '));
+          hasMatchedBefore = false;
+          sentenceWords = [];
+          //console.log('thisWord', thisWord, 'idx', idx);
+        }
+    }
   })
 
   let selected_sentences = forwardSegments.push(backwardSegments);

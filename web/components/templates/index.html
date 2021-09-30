@@ -18,6 +18,7 @@
     }
   </style>
   <link rel="stylesheet" href="/static/pdfjs-dist/web/pdf_viewer.css">
+  <link rel="stylesheet" href="/static/balloon.css">
   <script src="/static/pdfjs-dist/build/pdf.js"></script>
   <script src="/static/pdfjs-dist/web/pdf_viewer.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -44,7 +45,14 @@
       <button id="clear_table_records">Clear table records</button>
     </div>
     <div>
-      <table id="selected_sentnce_table" width="350" >
+      <table width="350" border="1">
+        <thead>
+          <td>select</td>
+          <td>sentence</td>
+          <td>index</td>
+          <td>top</td>
+        </thead>
+        <tbody id="selected_sentnce_table"></tbody>
       </table>
     </div>
   </div>
