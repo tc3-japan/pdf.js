@@ -9,13 +9,38 @@ const CMAP_URL = "/static/pdfjs-dist/cmaps/";
 const CMAP_PACKED = true;
 const container = document.getElementById("viewerContainer");
 const eventBus = new pdfjsViewer.EventBus();
+var pdfDocument;
+// (Optionally) enable hyperlinks within PDF files.
+const pdfLinkService = new pdfjsViewer.PDFLinkService({
+  eventBus,
+});
+// (Optionally) enable find controller.
+const pdfFindController = new pdfjsViewer.PDFFindController({
+  eventBus,
+  linkService: pdfLinkService,
+});
+// (Optionally) enable scripting support.
+const SANDBOX_BUNDLE_SRC = "/static/pdfjs-dist/build/pdf.sandbox.js";
+const pdfScriptingManager = new pdfjsViewer.PDFScriptingManager({
+  eventBus,
+  sandboxBundleSrc: SANDBOX_BUNDLE_SRC,
+});
 const pdfViewer = new pdfjsViewer.PDFViewer({
   container,
   eventBus,
-  scale: 0.5,
+  //scale: 0.5,
+  linkService: pdfLinkService,
+  findController: pdfFindController,
+  scriptingManager: pdfScriptingManager,
+  enableScripting: true, // Only necessary in PDF.js version 2.10.377 and below.
+  textLayerMode: 1,
 });
+pdfLinkService.setViewer(pdfViewer);
+pdfScriptingManager.setViewer(pdfViewer);
+
 eventBus.on("pagesinit", function () {
   pdfViewer.currentScaleValue = 1;
+  pdfViewer.forceRendering();
 });
 
 // Add event listener
@@ -175,10 +200,150 @@ function on_clear_table_records_click() {
   selected_sentnce_table.innerHTML = '';
 }
 
-function on_select_sentence_button_click() {
+function renderPDF(url, canvasContainer, options) {
+
+  var options = options || { scale: 1 };
+      
+  function renderPage(page) {
+      var viewport = page.getViewport(options.scale);
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      var renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      canvasContainer.appendChild(canvas);
+      
+      page.render(renderContext);
+  }
+  
+  function renderPages(pdfDoc) {
+      for(var num = 1; num <= pdfDoc.numPages; num++)
+          pdfDoc.getPage(num).then(renderPage);
+  }
+
+  url = "/static/uploads/tmp.pdf",
+  pdfjsLib.disableWorker = true;
+  //pdfjsLib.getDocument(url).then(renderPages);
+  renderPages(pdfDocument);
+}
+
+function renderPage(num){
+  pdfDocument.getPage(num).then(function(page) {
+    var viewport = page.getViewport({scale: 1});
+    var renderContext = {
+      canvasContext: container,
+      viewport: viewport
+    };
+    var renderTask = page.render(renderContext);
+    renderTask.promise.then(
+      function () {
+        console.log('Page rendered');
+      }
+    );
+  });
+}
+
+const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function scroll_test_1() {
+  container.scrollTo(0, 1000);
+  await sleep(1000);
+  container.scrollTo(0, 3000);
+  await sleep(1000);
+  container.scrollTo(0, 5000);
+  await sleep(1000);
+  container.scrollTo(0, 7000);
+  await sleep(1000);
+  container.scrollTo(0, 9000);
+  await sleep(1000);
+  container.scrollTo(0, 11000);
+  await sleep(1000);
+}
+
+async function scroll_test_2() {
+  for (i = 1; i > 11; i++) {
+    container.scrollTo(0, i * 1000);
+    await sleep(1000);
+  }
+}
+
+async function scroll_test_3() {
+  for (i = 1; i <= pdfViewer.pagesCount; i++) {
+    pdfViewer.currentPageNumber = i;
+    await sleep(10);
+  }
+  for (i = pdfViewer.pagesCount; i >= 1; i--) {
+    pdfViewer.currentPageNumber = i;
+    await sleep(10);
+  }
+}
+
+function show_viewer() {
+  let viewer = document.getElementById("viewerContainer");
+  viewer.style.display = "block";
+}
+
+function hide_layer() {
+  let viewer = document.getElementById("layer");
+  viewer.style.display = "none";
+}
+
+async function on_select_sentence_button_click() {
   //console.log("call on_search_click");
   //console.log("search_word: " + search_word);
   let search_word = document.getElementById("search_word").value;
+
+  // scroll test
+  //await scroll_test_1();
+  //await scroll_test_2();
+  await scroll_test_3();
+
+  hide_layer();
+
+/*
+  for (i = 1; i < pdfViewer.pagesCount; i++) {
+    renderPage(i);
+  }
+*/
+
+
+  /*
+  console.log("page count: ", pdfViewer.pagesCount);
+  var options = options || { scale: 1 };
+  renderPDF("", container, options);
+  */
+ /*
+  for (i = 1; i < pdfViewer.pagesCount; i++) {
+    pdfDocument.getPage(i).then(pdfPage => {
+      pdfPage.getTextContent().then(text => {
+        console.log("page num: " + i + " text:" + text);
+      });
+      pdfPage.draw();
+      //var pdfPage = pdfDocument.getPage(i);
+      //pdfLinkService.cachePageRef(i, pdfPage.ref);
+      //pdfPage.render();
+    });
+    //pdfViewer.currentPageNumber = i;
+  }
+  */
+  /*
+  pdfFindController.executeCommand("findhighlightallchange", 
+  { query: "to",
+    phraseSearch: true,
+    caseSensitive: true,
+    entireWord: true,
+    highlightAll: true,
+    findPrevious: true
+  });
+  */
 
   // search forward direction
   var forwardSegments = [];
@@ -273,9 +438,9 @@ $.extend({
                   cMapPacked: CMAP_PACKED,
                 });
                 pdf_doc.promise.then(function (pdfDocument) {
-                  // Document loaded, specifying document for the viewer and
-                  // the (optional) linkService.
                   pdfViewer.setDocument(pdfDocument);
+                  pdfLinkService.setDocument(pdfDocument, null);
+                  this.pdfDocument = pdfDocument;
                   console.log("open pdf");
                 });
                 /**
