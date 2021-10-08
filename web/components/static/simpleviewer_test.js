@@ -10,37 +10,14 @@ const CMAP_PACKED = true;
 const container = document.getElementById("viewerContainer");
 const eventBus = new pdfjsViewer.EventBus();
 var pdfDocument;
-// (Optionally) enable hyperlinks within PDF files.
-const pdfLinkService = new pdfjsViewer.PDFLinkService({
-  eventBus,
-});
-// (Optionally) enable find controller.
-const pdfFindController = new pdfjsViewer.PDFFindController({
-  eventBus,
-  linkService: pdfLinkService,
-});
-// (Optionally) enable scripting support.
-const SANDBOX_BUNDLE_SRC = "/static/pdfjs-dist/build/pdf.sandbox.js";
-const pdfScriptingManager = new pdfjsViewer.PDFScriptingManager({
-  eventBus,
-  sandboxBundleSrc: SANDBOX_BUNDLE_SRC,
-});
 const pdfViewer = new pdfjsViewer.PDFViewer({
   container,
   eventBus,
-  //scale: 0.5,
-  linkService: pdfLinkService,
-  findController: pdfFindController,
-  scriptingManager: pdfScriptingManager,
-  enableScripting: true, // Only necessary in PDF.js version 2.10.377 and below.
-  textLayerMode: 1,
+  scale: 0.5,
 });
-pdfLinkService.setViewer(pdfViewer);
-pdfScriptingManager.setViewer(pdfViewer);
 
 eventBus.on("pagesinit", function () {
   pdfViewer.currentScaleValue = 1;
-  pdfViewer.forceRendering();
 });
 
 // Add event listener
@@ -48,13 +25,16 @@ let select_sentence_button = document.getElementById("select_sentence");
 select_sentence_button.addEventListener("click", on_select_sentence_button_click, false);
 
 let clear_all_highlight_button = document.getElementById("clear_highlight");
-clear_all_highlight_button.addEventListener("click", on_clear_all_highlight_button_click, false);
+clear_all_highlight_button.addEventListener("click", on_clear_all_highlight, false);
 
 let clear_table_records = document.getElementById("clear_table_records");
 clear_table_records.addEventListener("click", on_clear_table_records_click, false);
 
 let viewer = document.getElementById("viewer");
 viewer.addEventListener("dblclick", on_dblclick);
+
+let load_pages = document.getElementById("load_pages");
+load_pages.addEventListener("click", on_load_pages);
 
 var selected_sentnce_table = document.getElementById('selected_sentnce_table');
 
@@ -67,9 +47,7 @@ function show_balloon(target_element){
 }
 
 function on_dblclick(event) {
-  //console.log("on_mouse_up in");
   console.log(event);
-  //console.log(event.srcElement.textContent);
 
   var dblclicked_word = event.srcElement.textContent;
   var sentence = event.srcElement.textContent;
@@ -200,55 +178,6 @@ function on_clear_table_records_click() {
   selected_sentnce_table.innerHTML = '';
 }
 
-function renderPDF(url, canvasContainer, options) {
-
-  var options = options || { scale: 1 };
-      
-  function renderPage(page) {
-      var viewport = page.getViewport(options.scale);
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
-      var renderContext = {
-        canvasContext: ctx,
-        viewport: viewport
-      };
-      
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      canvasContainer.appendChild(canvas);
-      
-      page.render(renderContext);
-  }
-  
-  function renderPages(pdfDoc) {
-      for(var num = 1; num <= pdfDoc.numPages; num++)
-          pdfDoc.getPage(num).then(renderPage);
-  }
-
-  url = "/static/uploads/tmp.pdf",
-  pdfjsLib.disableWorker = true;
-  //pdfjsLib.getDocument(url).then(renderPages);
-  renderPages(pdfDocument);
-}
-
-function renderPage(num){
-  pdfDocument.getPage(num).then(function(page) {
-    var viewport = page.getViewport({scale: 1});
-    var renderContext = {
-      canvasContext: container,
-      viewport: viewport
-    };
-    var renderTask = page.render(renderContext);
-    renderTask.promise.then(
-      function () {
-        console.log('Page rendered');
-      }
-    );
-  });
-}
-
-const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -296,116 +225,175 @@ function hide_layer() {
   viewer.style.display = "none";
 }
 
-async function on_select_sentence_button_click() {
-  //console.log("call on_search_click");
-  //console.log("search_word: " + search_word);
-  let search_word = document.getElementById("search_word").value;
-
-  // scroll test
-  //await scroll_test_1();
-  //await scroll_test_2();
-  await scroll_test_3();
-
-  hide_layer();
-
-/*
-  for (i = 1; i < pdfViewer.pagesCount; i++) {
-    renderPage(i);
-  }
-*/
-
-
-  /*
-  console.log("page count: ", pdfViewer.pagesCount);
-  var options = options || { scale: 1 };
-  renderPDF("", container, options);
-  */
- /*
-  for (i = 1; i < pdfViewer.pagesCount; i++) {
-    pdfDocument.getPage(i).then(pdfPage => {
-      pdfPage.getTextContent().then(text => {
-        console.log("page num: " + i + " text:" + text);
-      });
-      pdfPage.draw();
-      //var pdfPage = pdfDocument.getPage(i);
-      //pdfLinkService.cachePageRef(i, pdfPage.ref);
-      //pdfPage.render();
-    });
-    //pdfViewer.currentPageNumber = i;
-  }
-  */
-  /*
-  pdfFindController.executeCommand("findhighlightallchange", 
-  { query: "to",
-    phraseSearch: true,
-    caseSensitive: true,
-    entireWord: true,
-    highlightAll: true,
-    findPrevious: true
-  });
-  */
-
-  // search forward direction
-  var forwardSegments = [];
-  var sentenceWords = [];
-  var hasMatchedBefore = false;
-  $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
-    var thisWord = $(el).html();
-    var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
-    if (hasMatchedBefore || hasMatchedClickedWord) {
-        //console.log('thisWord', thisWord, 'idx', idx);
-        sentenceWords.push(thisWord);
-        if (thisWord != " " && thisWord != "　") {
-          $(el).css('background-color', 'green');
-          //$(el).css('opacity', '0.2');
-        }
-        hasMatchedBefore = true;
-    }
-    var hasEndOfSentence = thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1;
-    if (hasEndOfSentence && hasMatchedBefore) {
-        hasMatchedBefore = false;
-        forwardSegments.push(sentenceWords.join(' '));
-        sentenceWords = [];
-    }
-  })
-  // now do a backward search
-  var backwardSegments = [];
-  var sentenceWords = [];
-  var hasMatchedBefore = false;
-  $(document).find('div.textLayer>span').toArray().reverse().forEach(function(el, idx) {
-    var thisWord = $(el).html();
-    var hasMatchedClickedWord = thisWord.indexOf(search_word) > -1;
-    var hasEndOfSentence = thisWord.indexOf(search_word) == -1 && (thisWord.indexOf('.') > -1 || thisWord.indexOf('?') > -1 || thisWord.indexOf('!') > -1);
-    if (!hasEndOfSentence && (hasMatchedBefore || hasMatchedClickedWord)) {
-        sentenceWords.push(thisWord);
-        if (thisWord != " " && thisWord != "　") {
-          $(el).css('background-color', 'green');
-          //$(el).css('opacity', '0.2');
-        }
-        hasMatchedBefore = true;
-    }
-    if (idx > 1) {
-      if (hasEndOfSentence && hasMatchedBefore) {
-          backwardSegments.push(sentenceWords.reverse().join(' '));
-          hasMatchedBefore = false;
-          sentenceWords = [];
-          //console.log('thisWord', thisWord, 'idx', idx);
-        }
-    }
-  })
-
-  let selected_sentences = forwardSegments.push(backwardSegments);
-
-  console.log(forwardSegments);
-  console.log(backwardSegments);
-  console.log("selected sentence:");
-  console.log(selected_sentences);
-
+function on_load_pages() {
+  scroll_test_3();
 }
 
-function on_clear_all_highlight_button_click(event) {
+function check_end_of_line(value) {
+  if (value.indexOf('.') > -1 || value.indexOf('?') > -1 || value.indexOf('!') > -1) {
+    return value;
+  }
+}
+
+function get_min_index(index_1, index_2, index_3) {
+  console.log("index_1: " + index_1, "index_2: " + index_2, "index_3: " + index_3)
+  let list = [];
+  if (index_1 != -1) list.push(index_1);
+  if (index_2 != -1) list.push(index_2);
+  if (index_3 != -1) list.push(index_3);
+  const aryMin = function (a, b) {return Math.min(a, b);}
+  let min_index = list.reduce(aryMin);
+  console.log("min_index: " + min_index)
+  return min_index;
+}
+
+function get_max_index(index_1, index_2, index_3) {
+  console.log("index_1: " + index_1, "index_2: " + index_2, "index_3: " + index_3)
+  let list = [];
+  if (index_1 != -1) list.push(index_1);
+  if (index_2 != -1) list.push(index_2);
+  if (index_3 != -1) list.push(index_3);
+  const aryMax = function (a, b) {return Math.max(a, b);}
+  let max_index = list.reduce(aryMax);
+  console.log("max_index: " + max_index)
+  return max_index;
+}
+
+function on_select_sentence_button_click() {
+  // clear all highlight
+  //on_clear_all_highlight();
+
+  let search_word = document.getElementById("search_word").value;
+  console.log("search_word: " + search_word);
+  if (search_word == "" || check_end_of_line(search_word)) return;
+
+  var sentence;
+  var span_elements = document.querySelectorAll('div.textLayer > span');
+
+  span_elements.forEach(function (current_element) {
+    if (current_element.textContent.indexOf(search_word) > -1) {
+      console.log("current_element.textContent: " + current_element.textContent);
+      // check previous element
+      var previous_element = current_element.previousElementSibling;
+      //console.log("previous_element: " + previous_element);
+      if (previous_element != null) {
+        while (previous_element != null) {
+          if (previous_element.tagName == "SPAN") {
+            if (exist_child_span(previous_element)) {
+              break;
+            }
+            let previous_word = previous_element.textContent;
+            let index_1 = previous_word.indexOf('.');
+            let index_2 = previous_word.indexOf('?');
+            let index_3 = previous_word.indexOf('!');
+            if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
+                var index = get_max_index(index_1, index_2, index_3);
+                console.log("index=" + index);
+                console.log("previous_word.length=" + previous_word.length);
+                if (index == previous_word.length - 1) {
+                  break;
+                }
+                //console.log("previous_word.length: " + previous_word.length);
+                let highlight_word = previous_word.substring(index + 1, previous_word.length);
+                let other_word = previous_word.substring(0, index + 1);
+                console.log("prev highlight_word: " + highlight_word);
+                console.log("prev other_word: " + other_word);
+                // remove text content of parent element
+                previous_element.innerText = other_word;
+                // add child element of span
+                previous_element.innerHTML = create_highlight_span(highlight_word, other_word, false);
+                break;
+            } else {
+              previous_element.style.backgroundColor = "red";
+            }
+          }
+          previous_element = previous_element.previousElementSibling;
+        }
+      }
+      // check current element
+      let end_of_line = false;
+      let current_word = current_element.textContent;
+      let index_1 = current_word.indexOf('.');
+      let index_2 = current_word.indexOf('?');
+      let index_3 = current_word.indexOf('!');
+      if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
+          console.log("current_element" + current_element);
+          var index = get_max_index(index_1, index_2, index_3);
+          //console.log("current_word.length: " + current_word.length);
+          let before_word = current_word.substring(0, index + 1);
+          let after_word = current_word.substring(index + 1, current_word.length);
+          console.log("current before_word: [" + before_word + "]");
+          console.log("current after_word: [" + after_word + "]");
+          // remove text content of parent element
+          if (before_word == "" || after_word == "") {
+            current_element.style.backgroundColor = "green";
+          } else {
+            if (after_word.indexOf(search_word) > -1) {
+              // add child element of span
+              console.log("after_word include search_word");
+              current_element.innerHTML = create_highlight_span(before_word, after_word, false);
+            } else {
+              // add child element of span
+              console.log("before_word include search_word");
+              current_element.innerHTML = create_highlight_span(before_word, after_word, true);
+            }
+          }
+          end_of_line = true;
+      } else {
+        current_element.style.backgroundColor = "green";
+      }
+      // check next element
+      var next_element = current_element.nextElementSibling;
+      if (next_element != null && end_of_line == false) {
+        while (next_element != null) {
+          //console.log("next_element.tagName: " + next_element.tagName);
+          if (next_element.tagName == "SPAN") {
+            let next_word = next_element.textContent;
+            let index_1 = next_word.indexOf('.');
+            let index_2 = next_word.indexOf('?');
+            let index_3 = next_word.indexOf('!');
+            if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
+              var index = get_min_index(index_1, index_2, index_3);
+              // modify element of <span>
+              //console.log("next_word.length: " + next_word.length);
+              let highlight_word = next_word.substring(0, index + 1);
+              let other_word = next_word.substring(index + 1, next_word.length);
+              console.log("next highlight_word: [" + highlight_word + "]");
+              console.log("next other_word: [" + other_word + "]");
+              // add child element of span
+              next_element.innerHTML = create_highlight_span(highlight_word, other_word, true);
+              break;
+            } else {
+              next_element.style.backgroundColor = "blue";
+            }
+          }
+          next_element = next_element.nextElementSibling;
+        }
+      }
+    }
+  });
+}
+
+function exist_child_span(element) {
+  return element.childElementCount != 0;
+}
+
+function create_highlight_span(highlight_word, other_word, is_highlight_top) {
+  let start_span = "<span class='highlight appended'>";
+  let end_span = "</span>"
+  if (is_highlight_top) {
+    return start_span + highlight_word + end_span + other_word;
+  } else {
+    return other_word + start_span + highlight_word + end_span;
+  }
+}
+
+function on_clear_all_highlight() {
   $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
       $(el).css('background-color', '');
+  })
+  $(document).find('div.textLayer>span>span').toArray().forEach(function(el, idx) {
+    $(el).remove();
   })
 }
 
@@ -439,10 +427,10 @@ $.extend({
                 });
                 pdf_doc.promise.then(function (pdfDocument) {
                   pdfViewer.setDocument(pdfDocument);
-                  pdfLinkService.setDocument(pdfDocument, null);
                   this.pdfDocument = pdfDocument;
                   console.log("open pdf");
                 });
+
                 /**
                  * extract sentences from PDF
                  */
