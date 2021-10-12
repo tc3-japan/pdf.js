@@ -24,7 +24,10 @@ eventBus.on("pagesinit", function () {
 let select_sentence_button = document.getElementById("select_sentence");
 select_sentence_button.addEventListener("click", on_select_sentence_button_click, false);
 
-let clear_all_highlight_button = document.getElementById("clear_highlight");
+let clear_searched_highlight_button = document.getElementById("clear_searched_highlight");
+clear_searched_highlight_button.addEventListener("click", on_clear_searched_highlight, false);
+
+let clear_all_highlight_button = document.getElementById("clear_all_highlight");
 clear_all_highlight_button.addEventListener("click", on_clear_all_highlight, false);
 
 let clear_table_records = document.getElementById("clear_table_records");
@@ -56,7 +59,7 @@ function on_dblclick(event) {
 
   if (event.srcElement.className != "textLayer" && event.srcElement.className != "endOfContent") {
     // change to the background color of the dblclicked element
-    change_background_color(event.srcElement.style);
+    change_double_clicked_background_color(event.srcElement.style);
   } else {
     return;
   }
@@ -82,7 +85,7 @@ function on_dblclick(event) {
         previous_element = null;
     } else {
       if (previous_word != " " && previous_word != "　") {
-        change_background_color(previous_element.style);
+        change_double_clicked_background_color(previous_element.style);
       }
       sentence = previous_word + sentence;
         // null is no more next element;
@@ -96,7 +99,7 @@ function on_dblclick(event) {
       let next_word = next_element.textContent;
       sentence += next_word;
       if (next_word != " " && next_word != "　") {
-        change_background_color(next_element.style);
+        change_double_clicked_background_color(next_element.style);
       }
       if (next_word.indexOf('.') > -1 || next_word.indexOf('?') > -1 || next_word.indexOf('!') > -1) {
         next_element = null;
@@ -151,13 +154,14 @@ function append_table_row(selected_sentnce, index, top) {
 }
 
 var is_new_selection = false;
-function change_background_color(style) {
-  if (style.backgroundColor == 'rgb(0, 0, 100)') {
-    style.backgroundColor = '';
+function change_double_clicked_background_color(style) {
+  if (style.backgroundColor == "orange") {
+    style.backgroundColor = "";
     is_new_selection = false;
   } else {
-    style.backgroundColor = 'rgb(0, 0, 100)';
-    //style.opacity = 1.5;
+    style.backgroundColor = "orange";
+    //style.backgroundColor = "rgba(0,100,0,0.9)";
+    //style.opacity = 1;
     is_new_selection = true;
   }
 }
@@ -235,33 +239,73 @@ function check_end_of_line(value) {
   }
 }
 
-function get_min_index(index_1, index_2, index_3) {
-  console.log("index_1: " + index_1, "index_2: " + index_2, "index_3: " + index_3)
-  let list = [];
-  if (index_1 != -1) list.push(index_1);
-  if (index_2 != -1) list.push(index_2);
-  if (index_3 != -1) list.push(index_3);
-  const aryMin = function (a, b) {return Math.min(a, b);}
-  let min_index = list.reduce(aryMin);
-  console.log("min_index: " + min_index)
+let delimiters = [".", "?", "!", ".]", "].", ".)", ").", ".}", "}.", "\".", ".\"", "\'.", ".\'"];
+
+signed_numerics = "/^([1-9]\d*|0)(\.\d+)?$/";
+function is_numerics(delimiter, words, index) {
+  if (delimiter == ".") {
+    console.log("is_numerics[delimiter, words, index]:[" + delimiter + "," + words + "," + index + "]");
+    console.log("index word: " + words.substring(index, index + 1));
+    let check_word = words.substring(index - 1, index + 2);
+    console.log("check_word: " + check_word);
+    //var regexp = new RegExp(signed_numerics);
+    //result = regexp.test(check_word);
+    result = isFinite(check_word);
+    console.log("regex result: " + result);
+    return result;
+  }
+  return false;
+}
+
+function get_min_index(words) {
+  let index_list = [];
+  delimiters.forEach(function (delimiter) {
+    let index = words.indexOf(delimiter);
+    if (index != -1 && !is_numerics(delimiter, words, index)) {
+      index_list.push(index);
+    }
+  })
+  if (index_list.length == 0) return -1;
+  const aryMin = function (a, b) {return Math.max(a, b);}
+  let min_index = index_list.reduce(aryMin);
+  //console.log("min_index: " + min_index);
   return min_index;
 }
 
-function get_max_index(index_1, index_2, index_3) {
-  console.log("index_1: " + index_1, "index_2: " + index_2, "index_3: " + index_3)
-  let list = [];
-  if (index_1 != -1) list.push(index_1);
-  if (index_2 != -1) list.push(index_2);
-  if (index_3 != -1) list.push(index_3);
+function get_max_index(words) {
+  let index_list = [];
+  delimiters.forEach(function (delimiter) {
+    let index = words.indexOf(delimiter);
+    // check numeric
+    if (index != -1 && !is_numerics(delimiter, words, index)) {
+      index_list.push(index);
+    }
+  })
+  if (index_list.length == 0) return -1;
+  //console.log("index_list: " + index_list);
   const aryMax = function (a, b) {return Math.max(a, b);}
-  let max_index = list.reduce(aryMax);
+  let max_index = index_list.reduce(aryMax);
   console.log("max_index: " + max_index)
   return max_index;
 }
 
+let Mode = {
+  develop : 1,
+  product : 2,
+};
+//let mode = Mode.develop;
+let mode = Mode.product;
+function change_background_color(element, color) {
+  if (mode == Mode.develop) {
+    element.style.backgroundColor = color;
+  } else if (mode == Mode.product) {
+    element.style.backgroundColor = "green";
+  }
+}
+
 function on_select_sentence_button_click() {
   // clear all highlight
-  //on_clear_all_highlight();
+  on_clear_searched_highlight();
 
   let search_word = document.getElementById("search_word").value;
   console.log("search_word: " + search_word);
@@ -272,88 +316,99 @@ function on_select_sentence_button_click() {
 
   span_elements.forEach(function (current_element) {
     if (current_element.textContent.indexOf(search_word) > -1) {
-      console.log("current_element.textContent: " + current_element.textContent);
+      //console.log("current_element.textContent: " + current_element.textContent);
+
       // check previous element
       var previous_element = current_element.previousElementSibling;
       //console.log("previous_element: " + previous_element);
       if (previous_element != null) {
         while (previous_element != null) {
           if (previous_element.tagName == "SPAN") {
+            console.log("previous_element.textContent: " + previous_element.textContent);
             if (exist_child_span(previous_element)) {
+              console.log("exist_child_span");
+              //remove_inner_span(previous_element);
+              console.log("remove_inner_span");
+              //change_background_color(previous_element, "red");
+              console.log("change_background_color: red");
               break;
             }
             let previous_word = previous_element.textContent;
-            let index_1 = previous_word.indexOf('.');
-            let index_2 = previous_word.indexOf('?');
-            let index_3 = previous_word.indexOf('!');
-            if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
-                var index = get_max_index(index_1, index_2, index_3);
-                console.log("index=" + index);
-                console.log("previous_word.length=" + previous_word.length);
-                if (index == previous_word.length - 1) {
-                  break;
-                }
-                //console.log("previous_word.length: " + previous_word.length);
-                let highlight_word = previous_word.substring(index + 1, previous_word.length);
-                let other_word = previous_word.substring(0, index + 1);
-                console.log("prev highlight_word: " + highlight_word);
-                console.log("prev other_word: " + other_word);
-                // remove text content of parent element
-                previous_element.innerText = other_word;
-                // add child element of span
-                previous_element.innerHTML = create_highlight_span(highlight_word, other_word, false);
+            let index = get_max_index(previous_word);
+            if (index > -1) {
+              //console.log("index=" + index);
+              if (index == previous_word.length - 1) {
+                console.log("index == previous_word.length - 1");
                 break;
+              }
+              //console.log("previous_word.length: " + previous_word.length);
+              let highlight_word = previous_word.substring(index + 1, previous_word.length);
+              let other_word = previous_word.substring(0, index + 1);
+              console.log("prev highlight_word: " + highlight_word);
+              console.log("prev other_word: " + other_word);
+              // remove text content of parent element
+              previous_element.innerText = other_word;
+              // add child element of span
+              previous_element.innerHTML = create_highlight_span(highlight_word, other_word, false, "red");
+              console.log("previous_element.innerHTML: " + previous_element.innerHTML);
+              break;
             } else {
-              previous_element.style.backgroundColor = "red";
+              change_background_color(previous_element, "red");
             }
           }
           previous_element = previous_element.previousElementSibling;
         }
       }
+
       // check current element
-      let end_of_line = false;
+      let include_end_of_line = false;
       let current_word = current_element.textContent;
-      let index_1 = current_word.indexOf('.');
-      let index_2 = current_word.indexOf('?');
-      let index_3 = current_word.indexOf('!');
-      if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
-          console.log("current_element" + current_element);
-          var index = get_max_index(index_1, index_2, index_3);
-          //console.log("current_word.length: " + current_word.length);
-          let before_word = current_word.substring(0, index + 1);
-          let after_word = current_word.substring(index + 1, current_word.length);
-          console.log("current before_word: [" + before_word + "]");
-          console.log("current after_word: [" + after_word + "]");
-          // remove text content of parent element
-          if (before_word == "" || after_word == "") {
-            current_element.style.backgroundColor = "green";
+      console.log("current_element.textContent: " + current_element.textContent);
+      //console.log("current_element" + current_element);
+      var index = get_max_index(current_word);
+      if (index > -1) {
+        //console.log("current_word.length: " + current_word.length);
+        let before_word = current_word.substring(0, index + 1);
+        let after_word = current_word.substring(index + 1, current_word.length);
+        console.log("current before_word: [" + before_word + "]");
+        console.log("current after_word: [" + after_word + "]");
+        // remove text content of parent element
+        if (before_word == "" || after_word == "") {
+          change_background_color(current_element, "green");
+        } else {
+          if (after_word.indexOf(search_word) > -1) {
+            // add child element of span
+            console.log("after_word include search_word");
+            current_element.innerHTML = create_highlight_span(before_word, after_word, false, "green");
           } else {
-            if (after_word.indexOf(search_word) > -1) {
-              // add child element of span
-              console.log("after_word include search_word");
-              current_element.innerHTML = create_highlight_span(before_word, after_word, false);
-            } else {
-              // add child element of span
-              console.log("before_word include search_word");
-              current_element.innerHTML = create_highlight_span(before_word, after_word, true);
-            }
+            // add child element of span
+            console.log("before_word include search_word");
+            current_element.innerHTML = create_highlight_span(before_word, after_word, true, "green");
           }
-          end_of_line = true;
+          console.log("current_element.innerHTML: " + current_element.innerHTML);
+        }
+        //console.log("include_end_of_line = true");
+        include_end_of_line = true;
       } else {
-        current_element.style.backgroundColor = "green";
+        change_background_color(current_element, "green");
       }
+
       // check next element
       var next_element = current_element.nextElementSibling;
-      if (next_element != null && end_of_line == false) {
+      if (next_element != null && include_end_of_line == false) {
         while (next_element != null) {
           //console.log("next_element.tagName: " + next_element.tagName);
           if (next_element.tagName == "SPAN") {
+            console.log("next_element.textContent:" + next_element.textContent);
+            if (exist_child_span(next_element)) {
+              console.log("exist_child_span");
+              //remove_inner_span(next_element);
+              //change_background_color(next_element, "blue");
+            }
             let next_word = next_element.textContent;
-            let index_1 = next_word.indexOf('.');
-            let index_2 = next_word.indexOf('?');
-            let index_3 = next_word.indexOf('!');
-            if (index_1 > -1 || index_2 > -1 || index_3 > -1) {
-              var index = get_min_index(index_1, index_2, index_3);
+            var index = get_min_index(next_word);
+            if (index > -1) 
+            {
               // modify element of <span>
               //console.log("next_word.length: " + next_word.length);
               let highlight_word = next_word.substring(0, index + 1);
@@ -361,15 +416,17 @@ function on_select_sentence_button_click() {
               console.log("next highlight_word: [" + highlight_word + "]");
               console.log("next other_word: [" + other_word + "]");
               // add child element of span
-              next_element.innerHTML = create_highlight_span(highlight_word, other_word, true);
+              next_element.innerHTML = create_highlight_span(highlight_word, other_word, true, "blue");
+              console.log("next_element.innerHTML: " + next_element.innerHTML);
               break;
             } else {
-              next_element.style.backgroundColor = "blue";
+              change_background_color(next_element, "blue");
             }
           }
           next_element = next_element.nextElementSibling;
         }
       }
+      
     }
   });
 }
@@ -378,8 +435,23 @@ function exist_child_span(element) {
   return element.childElementCount != 0;
 }
 
-function create_highlight_span(highlight_word, other_word, is_highlight_top) {
-  let start_span = "<span class='highlight appended'>";
+function get_highlight_span_color() {
+  if (mode == Mode.develop) {
+    return ["green", "blue", "red", "orange"];
+  } else if (mode == Mode.product) {
+    return ["green"];
+  }
+}
+
+function get_highlight_span_color_for_remove() {
+  return ["green", "blue", "red", "orange"];
+}
+
+function create_highlight_span(highlight_word, other_word, is_highlight_top, bg_color) {
+  if (mode == Mode.product) {
+    bg_color = "green";
+  }
+  let start_span = '<span class="highlight appended" style="background-color: ' + bg_color + ';">';
   let end_span = "</span>"
   if (is_highlight_top) {
     return start_span + highlight_word + end_span + other_word;
@@ -388,12 +460,40 @@ function create_highlight_span(highlight_word, other_word, is_highlight_top) {
   }
 }
 
-function on_clear_all_highlight() {
-  $(document).find('div.textLayer>span').toArray().forEach(function(el, idx) {
-      $(el).css('background-color', '');
+function remove_inner_span(span_element) {
+  let bg_colors = get_highlight_span_color_for_remove();
+  bg_colors.forEach(function(bg_color) {
+    let start_span = '<span class="highlight appended" style="background-color: ' + bg_color + ';">';
+    let end_span = "</span>"
+    console.log("remove inner start span " + start_span);
+    span_element.innerHTML = span_element.innerHTML.replace(start_span, "").replace(end_span, "");
   })
-  $(document).find('div.textLayer>span>span').toArray().forEach(function(el, idx) {
-    $(el).remove();
+}
+
+function on_clear_searched_highlight() {
+  var elements = document.querySelectorAll('div.textLayer > span');
+  elements.forEach(function (element) {
+    if (element.style.backgroundColor != "orange") {
+      element.style.backgroundColor = "";
+      if (element.childElementCount > 0) {
+        if (element.innerHTML.indexOf("orange") == -1) {
+          //console.log("element.innerHTML: " + element.innerHTML);
+          remove_inner_span(element);
+        }
+      }
+    }
+  })
+}
+
+function on_clear_all_highlight() {
+  var elements = document.querySelectorAll('div.textLayer > span');
+  elements.forEach(function (element) {
+    element.style.backgroundColor = "";
+    if (element.childElementCount > 0) {
+      console.log("clear highlight before element.innerHTML: " + element.innerHTML);
+      remove_inner_span(element);
+      console.log("clear highlight after element.innerHTML: " + element.innerHTML);
+    }
   })
 }
 
